@@ -433,13 +433,33 @@ rpmostree_sysroot_upgrader_pull_base (RpmOstreeSysrootUpgrader *self, const char
         if (override_commit)
           return glnx_throw (error, "Specifying commit overrides for container-image-reference "
                                     "type refspecs is not supported");
-        if (check)
-          return glnx_throw (error, "Cannot currently check for updates without downloading");
 
-        CXX_TRY_VAR (import,
-                     rpmostreecxx::pull_container (*self->repo, *cancellable, r.refspec.c_str ()),
-                     error);
-        new_base_rev = g_strdup (import->merge_commit.c_str ());
+        if (check)
+          {
+            g_autofree char *origin_remote = NULL;
+            g_autofree char *origin_ref = NULL;
+            if (!ostree_parse_refspec (r.refspec.c_str (), &origin_remote, &origin_ref, error))
+              return FALSE;
+
+            CXX_TRY_VAR (
+                res,
+                rpmostreecxx::compare_local_to_remote_container (
+                    *self->repo, *cancellable, r.refspec.c_str (), origin_remote, origin_ref),
+                error);
+
+            rpmostree_output_message ("%s", res.c_str ());
+            *out_changed = TRUE;
+            return TRUE;
+          }
+        else
+          {
+            CXX_TRY_VAR (
+                import,
+                rpmostreecxx::pull_container (*self->repo, *cancellable, r.refspec.c_str ()),
+                error);
+
+            new_base_rev = g_strdup (import->merge_commit.c_str ());
+          }
         break;
       }
     case rpmostreecxx::RefspecType::Checksum:

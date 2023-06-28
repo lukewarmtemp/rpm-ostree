@@ -201,6 +201,13 @@ pub mod ffi {
             c: &str,
         ) -> Result<Box<ContainerImageState>>;
         fn purge_refspec(repo: &OstreeRepo, refspec: &str) -> Result<()>;
+        fn compare_local_to_remote_container(
+                        repo: &OstreeRepo,
+                        cancellable: &GCancellable,
+                        imgref: &str,
+                        remote_repo: &str,
+                        remote_imgref: &str,
+                    ) -> Result<String>;
     }
 
     // core.rs

@@ -2064,6 +2064,11 @@ extern "C"
       const ::rpmostreecxx::OstreeRepo &repo,
       const ::rpmostreecxx::GCancellable &cancellable) noexcept;
 
+  ::rust::repr::PtrLen rpmostreecxx$cxxbridge1$compare_local_to_remote_container (
+      const ::rpmostreecxx::OstreeRepo &repo, const ::rpmostreecxx::GCancellable &cancellable,
+      ::rust::Str imgref, ::rust::Str remote_repo, ::rust::Str remote_imgref,
+      ::rust::String *return$) noexcept;
+
   ::rust::repr::PtrLen rpmostreecxx$cxxbridge1$query_container_image_commit (
       const ::rpmostreecxx::OstreeRepo &repo, ::rust::Str c,
       ::rust::Box< ::rpmostreecxx::ContainerImageState> *return$) noexcept;
@@ -3654,6 +3659,22 @@ container_prune (const ::rpmostreecxx::OstreeRepo &repo,
     {
       throw ::rust::impl< ::rust::Error>::error (error$);
     }
+}
+
+::rust::String
+compare_local_to_remote_container (const ::rpmostreecxx::OstreeRepo &repo,
+                                   const ::rpmostreecxx::GCancellable &cancellable,
+                                   ::rust::Str imgref, ::rust::Str remote_repo,
+                                   ::rust::Str remote_imgref)
+{
+  ::rust::MaybeUninit< ::rust::String> return$;
+  ::rust::repr::PtrLen error$ = rpmostreecxx$cxxbridge1$compare_local_to_remote_container (
+      repo, cancellable, imgref, remote_repo, remote_imgref, &return$.value);
+  if (error$.ptr)
+    {
+      throw ::rust::impl< ::rust::Error>::error (error$);
+    }
+  return ::std::move (return$.value);
 }
 
 ::rust::Box< ::rpmostreecxx::ContainerImageState>

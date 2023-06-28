@@ -191,3 +191,59 @@ pub(crate) fn purge_refspec(repo: &crate::FFIOstreeRepo, imgref: &str) -> CxxRes
     }
     Ok(())
 }
+
+pub(crate) fn compare_local_to_remote_container(
+    repo: &crate::FFIOstreeRepo,
+    cancellable: &crate::FFIGCancellable,
+    imgref: &str,
+    remote_repo: &str,
+    remote_imgref: &str,
+) -> Result<String> {
+    let repo = &repo.glib_reborrow();
+    let cancellable = cancellable.glib_reborrow();
+    let imgref = &OstreeImageReference::try_from(imgref)?;
+    let r = Handle::current().block_on(async {
+        crate::utils::run_with_cancellable(
+            async { get_container_manifest_diff(repo, imgref, remote_repo, remote_imgref).await },
+            &cancellable,
+        )
+        .await
+    })?;
+    Ok(r)
+}
+
+pub async fn get_container_manifest_diff(
+    repo: &ostree::Repo,
+    imgref: &OstreeImageReference,
+    remote_repo: &str,
+    remote_imgref: &str,
+) -> Result<String> {
+    use ostree_ext::container::ImageReference;
+    use ostree_ext::container::ManifestDiff;
+    use ostree_ext::container::OstreeImageReference;
+    use ostree_ext::container::SignatureSource;
+    use ostree_ext::container::Transport;
+    use ostree_ext::oci_spec::image::ImageManifest;
+
+    let previous_state = ostree_ext::container::store::query_image_ref(&repo, &imgref.imgref)
+        .unwrap()
+        .unwrap();
+
+    let sigverify = SignatureSource::OstreeRemote(String::from(remote_repo));
+    let transport = Transport::Registry;
+    let new_imgref = ImageReference {
+        transport,
+        name: String::from(remote_imgref),
+    };
+    let container = OstreeImageReference {
+        sigverify,
+        imgref: new_imgref,
+    };
+    let manifest = ostree_ext::container::fetch_manifest(&container)
+        .await
+        .unwrap();
+
+    let diff = ManifestDiff::new(&previous_state.manifest, &manifest.0);
+
+    Ok(diff.export_as_string())
+}

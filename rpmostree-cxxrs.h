@@ -1768,6 +1768,11 @@ pull_container (const ::rpmostreecxx::OstreeRepo &repo,
 void container_prune (const ::rpmostreecxx::OstreeRepo &repo,
                       const ::rpmostreecxx::GCancellable &cancellable);
 
+::rust::String compare_local_to_remote_container (const ::rpmostreecxx::OstreeRepo &repo,
+                                                  const ::rpmostreecxx::GCancellable &cancellable,
+                                                  ::rust::Str imgref, ::rust::Str remote_repo,
+                                                  ::rust::Str remote_imgref);
+
 ::rust::Box< ::rpmostreecxx::ContainerImageState>
 query_container_image_commit (const ::rpmostreecxx::OstreeRepo &repo, ::rust::Str c);
 
