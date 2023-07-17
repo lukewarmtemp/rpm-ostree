@@ -30,6 +30,7 @@
 #include "rpmostree-rpm-util.h"
 
 #include <libglnx.h>
+#include <rpmostree-sysroot-upgrader.cxx>
 
 static char *opt_osname;
 static gboolean opt_reboot;
@@ -207,6 +208,12 @@ rpmostree_builtin_upgrade (int argc, char **argv, RpmOstreeCommandInvocation *in
       if (rpmostree_os_get_has_cached_update_rpm_diff (os_proxy))
         cached_update = rpmostree_os_dup_cached_update (os_proxy);
 
+      gboolean manifest_diff = FALSE;
+      // if (rpmostree_os_get_has_cached_update_manifest_diff (os_proxy)) {
+        manifest_diff = TRUE;
+        cached_update = rpmostree_os_dup_cached_update (os_proxy);
+      // }
+
       if (!cached_update)
         {
           g_print ("No updates available.\n");
@@ -215,9 +222,54 @@ rpmostree_builtin_upgrade (int argc, char **argv, RpmOstreeCommandInvocation *in
       else
         {
           /* preview --> verbose (i.e. we want the diff) */
-          if (!rpmostree_print_cached_update (cached_update, opt_preview, FALSE, cancellable,
+          if (!manifest_diff) {
+            if (!rpmostree_print_cached_update (cached_update, opt_preview, FALSE, cancellable,
                                               error))
             return FALSE;
+          }
+          else {
+            std::string test = "total:51,total_size:714.8 MB,total_removed:0,removed_size:0 bytes,total_added:0,added_size:0 bytes";
+            manifest_diff_add_db_diff (test, cancellable, error);
+
+
+
+            glnx_autofd int fd = -1;
+            g_autoptr (GError) local_error = NULL;
+            if (!glnx_openat_rdonly (AT_FDCWD, RPMOSTREE_AUTOUPDATES_CACHE_FILE, TRUE, &fd, &local_error))
+              {
+                if (!g_error_matches (local_error, G_IO_ERROR, G_IO_ERROR_NOT_FOUND))
+                  return g_propagate_error (error, util::move_nullify (local_error)), FALSE;
+                return TRUE; /* Note early return */
+              }
+
+            /* sanity check there isn't something fishy going on before even reading it in */
+            struct stat stbuf;
+            if (!glnx_fstat (fd, &stbuf, error))
+              return FALSE;
+
+            if (!rpmostree_check_size_within_limit (stbuf.st_size, OSTREE_MAX_METADATA_SIZE,
+                                                    RPMOSTREE_AUTOUPDATES_CACHE_FILE, error))
+              return FALSE;
+
+            g_autoptr (GBytes) data = glnx_fd_readall_bytes (fd, NULL, error);
+            if (!data)
+              return FALSE;
+
+            cached_update
+                = g_variant_ref_sink (g_variant_new_from_bytes (G_VARIANT_TYPE_VARDICT, data, FALSE));
+
+
+
+
+            // cached_update = rpmostree_os_dup_cached_update (os_proxy);
+            if (!rpmostree_print_cached_update_container (cached_update, opt_preview, FALSE, cancellable,
+                                              error))
+            {
+              return FALSE;
+            }
+            
+          }
+          
         }
     }
   else if (!opt_reboot)

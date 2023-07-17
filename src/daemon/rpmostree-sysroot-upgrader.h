@@ -98,6 +98,11 @@ const char *rpmostree_sysroot_upgrader_get_base (RpmOstreeSysrootUpgrader *self)
 
 DnfSack *rpmostree_sysroot_upgrader_get_sack (RpmOstreeSysrootUpgrader *self, GError **error);
 
+gboolean rpm_ostree_db_diff_ext_container (gchar* manifest_diff, GVariant **total,
+                        GVariant **total_size, GVariant **total_removed,
+                        GVariant **removed_size, GVariant **total_added,
+                        GVariant **added_size, GError **error);
+
 gboolean rpmostree_sysroot_upgrader_pull_base (RpmOstreeSysrootUpgrader *self,
                                                const char *dir_to_pull, OstreeRepoPullFlags flags,
                                                OstreeAsyncProgress *progress, gboolean *out_changed,

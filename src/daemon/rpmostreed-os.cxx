@@ -1730,6 +1730,7 @@ refresh_cached_update (RpmostreedOS *self, GError **error)
 
   rpmostree_os_set_cached_update (RPMOSTREE_OS (self), cached_update);
   rpmostree_os_set_has_cached_update_rpm_diff (RPMOSTREE_OS (self), cached_update != NULL);
+  rpmostree_os_set_has_cached_update_manifest_diff (RPMOSTREE_OS (self), cached_update != NULL);
   return TRUE;
 }
 
