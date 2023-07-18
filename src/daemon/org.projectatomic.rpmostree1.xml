@@ -106,7 +106,6 @@
       <annotation name="org.qtproject.QtDBus.QtTypeName" value="QVariantMap"/>
     </property>
     <property name="HasCachedUpdateRpmDiff" type="b" access="read"/>
-    <property name="HasCachedUpdateManifestDiff" type="b" access="read"/>
 
     <!-- Available options:
          "mode" (type 's')

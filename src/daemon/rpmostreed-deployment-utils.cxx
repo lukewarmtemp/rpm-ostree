@@ -399,6 +399,46 @@ rpm_diff_clear (RpmDiff *diff)
 
 G_DEFINE_AUTO_CLEANUP_CLEAR_FUNC (RpmDiff, rpm_diff_clear);
 
+typedef struct
+{
+  gboolean initialized;
+  GVariant *total;
+  GVariant *total_size;
+  GVariant *total_removed;
+  GVariant *removed_size;
+  GVariant *total_added;
+  GVariant *added_size;
+} ManifestDiff;
+
+static void
+manifest_diff_init (ManifestDiff *diff)
+{
+  g_assert (!diff->initialized);
+  diff->total = g_variant_new ("s", "");
+  diff->total_size = g_variant_new ("s", "");
+  diff->total_removed = g_variant_new ("s", "");
+  diff->removed_size = g_variant_new ("s", "");
+  diff->total_added = g_variant_new ("s", "");
+  diff->added_size = g_variant_new ("s", "");
+  diff->initialized = TRUE;
+}
+
+static void
+manifest_diff_clear (ManifestDiff *diff)
+{
+  if (!diff->initialized)
+    return;
+  g_variant_ref(diff->total);
+  g_variant_ref(diff->total_size);
+  g_variant_ref(diff->total_removed);
+  g_variant_ref(diff->removed_size);
+  g_variant_ref(diff->total_added);
+  g_variant_ref(diff->added_size);
+  diff->initialized = FALSE;
+}
+
+G_DEFINE_AUTO_CLEANUP_CLEAR_FUNC (ManifestDiff, manifest_diff_clear);
+
 static GVariant *
 single_pkg_variant_new (RpmOstreePkgTypes type, RpmOstreePackage *pkg)
 {
@@ -474,6 +514,25 @@ rpm_diff_add_db_diff (RpmDiff *diff, OstreeRepo *repo, RpmOstreePkgTypes type,
   return TRUE;
 }
 
+#include <iostream>
+#include <fstream>
+
+static gboolean
+manifest_diff_add_db_diff (ManifestDiff *diff, std::string manifest_diff, GCancellable *cancellable, GError **error)
+{
+  rpmostree_output_message ("Before copy");
+  gchar *converted_manifest_diff = strcpy(new char[manifest_diff.length() + 1], manifest_diff.c_str());
+  // manifest_diff = "total:51,total_size:714.8 MB,total_removed:0,removed_size:0 bytes,total_added:0,added_size:0 bytes";
+  rpmostree_output_message ("Before pop");
+  if (!rpm_ostree_db_diff_ext_container (converted_manifest_diff, &diff->total, &diff->total_size,
+                              &diff->total_removed, &diff->removed_size, &diff->total_added, &diff->added_size, error))
+    return FALSE;
+  
+  rpmostree_output_message ("After pop");
+
+  return TRUE;
+}
+
 static void
 rpm_diff_add_layered_diff (RpmDiff *diff, RpmOstreePackage *old_pkg, DnfPackage *new_pkg)
 {
@@ -519,6 +578,25 @@ rpm_diff_is_empty (RpmDiff *diff)
   return !diff->upgraded->len && !diff->downgraded->len && !diff->removed->len && !diff->added->len;
 }
 
+static gboolean
+manifest_diff_is_empty (ManifestDiff *diff)
+{
+  g_assert (diff->initialized);
+  const gchar *added;
+  const gchar *removed;
+  g_variant_get (diff->total_removed, "s", &removed);
+  g_variant_get (diff->total_added, "s", &added);
+  rpmostree_output_message ("%s", removed);
+  rpmostree_output_message ("%s", added);
+
+  if (!strcmp(removed, "0") && !strcmp(added, "0")) {
+    rpmostree_output_message ("hello");
+    return TRUE;
+  }
+
+  return !diff->total && !diff->total_size && !diff->total_removed && !diff->removed_size && !diff->total_added && !diff->added_size;
+}
+
 static GVariant *
 rpm_diff_variant_new (RpmDiff *diff)
 {
@@ -537,6 +615,41 @@ rpm_diff_variant_new (RpmDiff *diff)
   g_variant_dict_insert_value (
       &dict, "added", array_to_variant_new (RPMOSTREE_DIFF_SINGLE_GVARIANT_STRING, diff->added));
   return g_variant_dict_end (&dict);
+}
+
+static GVariant *
+manifest_diff_variant_new (ManifestDiff *diff)
+{
+  const gchar *tmp1;
+  const gchar *tmp2;
+  const gchar *tmp3;
+  const gchar *tmp4;
+  const gchar *tmp5;
+  const gchar *tmp6;
+
+  g_variant_get (diff->total, "s", &tmp1);
+  rpmostree_output_message ("%s", tmp1);
+  g_variant_get (diff->total_size, "s", &tmp2);
+  rpmostree_output_message ("%s", tmp2);
+  g_variant_get (diff->total_removed, "s", &tmp3);
+  rpmostree_output_message ("%s", tmp3);
+  g_variant_get (diff->removed_size, "s", &tmp4);
+  rpmostree_output_message ("%s", tmp4);
+  g_variant_get (diff->total_added, "s", &tmp5);
+  rpmostree_output_message ("%s", tmp5);
+  g_variant_get (diff->added_size, "s", &tmp6);
+  rpmostree_output_message ("%s", tmp6);
+
+  g_auto (GVariantDict) manifest_dict;
+  g_variant_dict_init (&manifest_dict, NULL);
+  g_variant_dict_insert (&manifest_dict, "total", "s", tmp1);
+  g_variant_dict_insert (&manifest_dict, "total_size", "s", tmp2);
+  g_variant_dict_insert (&manifest_dict, "total_removed", "s", tmp3);
+  g_variant_dict_insert (&manifest_dict, "removed_size", "s", tmp4);
+  g_variant_dict_insert (&manifest_dict, "total_added", "s", tmp5);
+  g_variant_dict_insert (&manifest_dict, "added_size", "s", tmp6);
+
+  return g_variant_dict_end (&manifest_dict);
 }
 
 static DnfPackage *
@@ -667,6 +780,7 @@ rpmostreed_update_generate_variant (OstreeDeployment *booted_deployment,
   /* let's start with the ostree side of things */
 
   const char *current_checksum = ostree_deployment_get_csum (booted_deployment);
+  rpmostree_output_message("Current check sum: %s", current_checksum);
   g_autofree char *current_base_checksum_owned = NULL;
   if (!rpmostree_deployment_get_base_layer (repo, booted_deployment, &current_base_checksum_owned,
                                             error))
@@ -687,10 +801,30 @@ rpmostreed_update_generate_variant (OstreeDeployment *booted_deployment,
     }
   else
     {
+      // resolve refspec does not work for containers, so in this case, we need to make our own function to return the new_base_checksum
+      rpmostree_output_message("Not staged");
       if (!ostree_repo_resolve_rev_ext (repo, r.refspec.c_str (), TRUE,
                                         static_cast<OstreeRepoResolveRevExtFlags> (0),
                                         &new_base_checksum_owned, error))
-        return FALSE;
+        {
+          rpmostree_output_message("No ostree checksum");
+          return FALSE;
+        }
+
+      // if (new_base_checksum == NULL) {
+      //   const OstreeRepo &tmp_repo = *repo;
+      //   const GCancellable &tmp_cancellable = *cancellable;
+      //   CXX_TRY_VAR (
+      //         import,
+      //         rpmostreecxx::pull_container (tmp_repo, tmp_cancellable, r.refspec.c_str ()),
+      //         error);
+
+      //   rpmostree_output_message("Before container checksum");
+      //   new_base_checksum_owned = g_strdup (import->merge_commit.c_str ());
+      //   rpmostree_output_message("new_base_checksum_owned: %s", new_base_checksum_owned);
+      // }
+
+      // rpmostree_output_message("Exit ostree checksum");
       new_base_checksum = new_base_checksum_owned;
       /* just assume that the hypothetical new deployment would also be layered if we are */
       is_new_layered = (current_base_checksum_owned != NULL);
@@ -725,6 +859,11 @@ rpmostreed_update_generate_variant (OstreeDeployment *booted_deployment,
   };
   rpm_diff_init (&rpm_diff);
 
+  g_auto (ManifestDiff) manifest_diff = {
+    0,
+  };
+  manifest_diff_init (&manifest_diff);
+
   /* we'll need these later for advisories, so just keep them around */
   g_autoptr (GPtrArray) ostree_modified_new = NULL;
   g_autoptr (GPtrArray) rpmmd_modified_new = NULL;
@@ -744,13 +883,50 @@ rpmostreed_update_generate_variant (OstreeDeployment *booted_deployment,
        *  - if a new base checksum was pulled, do a db diff of the old and new bases
        *  - if there are currently any layered pkgs, lookup in sack for newer versions
        */
+      gboolean rpm_diff_fail = FALSE;
       if (is_new_checksum)
         {
+          rpmostree_output_message("is_new_checksum");
+
           if (!rpm_diff_add_db_diff (&rpm_diff, repo, RPM_OSTREE_PKG_TYPE_BASE,
                                      current_base_checksum, new_base_checksum, &ostree_modified_new,
                                      cancellable, error))
-            return FALSE;
+            {
+              rpmostree_output_message("rpm diff failed");
+              rpm_diff_fail = TRUE;
+            }
         }
+      rpmostree_output_message("exit new checksum check");
+
+      const OstreeRepo &tmp_repo = *repo;
+      const GCancellable &tmp_cancellable = *cancellable;
+
+      g_autofree char *origin_remote = NULL;
+      g_autofree char *origin_ref = NULL;
+      if (!ostree_parse_refspec (r.refspec.c_str (), &origin_remote, &origin_ref, error))
+        return FALSE;
+
+      CXX_TRY_VAR (
+            res,
+            rpmostreecxx::compare_local_to_remote_container (
+                tmp_repo, tmp_cancellable, r.refspec.c_str (), origin_remote, origin_ref),
+            error);
+
+      rpmostree_output_message("%s", origin_remote);
+      rpmostree_output_message("%s", origin_ref);
+      rpmostree_output_message("%s", res.c_str());
+
+      gboolean manifest_diff_fail = FALSE;
+
+      if (!manifest_diff_add_db_diff (&manifest_diff, res.c_str (), cancellable, error)) {
+        rpmostree_output_message("manifest diff failed");
+        manifest_diff_fail = TRUE;
+      }
+
+      if (rpm_diff_fail && manifest_diff_fail) {
+        rpmostree_output_message("both updates failed");
+        return FALSE;
+      }
 
       /* now we look at the rpm-md/layering side */
 
@@ -766,6 +942,15 @@ rpmostreed_update_generate_variant (OstreeDeployment *booted_deployment,
   /* don't bother inserting if there's nothing new */
   if (!rpm_diff_is_empty (&rpm_diff))
     g_variant_dict_insert (dict, "rpm-diff", "@a{sv}", rpm_diff_variant_new (&rpm_diff));
+
+  gboolean check_container_manifest_diff = FALSE;
+  if (!manifest_diff_is_empty (&manifest_diff)) {
+    // if (!is_new_checksum) {
+      // g_variant_dict_insert (dict, "update-sha256", "s", "container_update_check_case");
+      g_variant_dict_insert (dict, "manifest-diff", "@a{sv}", manifest_diff_variant_new (&manifest_diff));
+      check_container_manifest_diff = TRUE;
+    // }
+  }
 
   /* now we look for advisories */
 
@@ -802,7 +987,7 @@ rpmostreed_update_generate_variant (OstreeDeployment *booted_deployment,
     }
 
   /* but if there are no updates, then just ditch the whole thing and return NULL */
-  if (is_new_checksum || rpmmd_modified_new)
+  if (is_new_checksum || rpmmd_modified_new || check_container_manifest_diff)
     {
       /* include a "state" checksum for cache invalidation; for now this is just the
        * checksum of the deployment against which we ran, though we could base it off more

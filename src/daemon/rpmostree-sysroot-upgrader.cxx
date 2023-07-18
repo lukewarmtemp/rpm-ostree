@@ -401,167 +401,167 @@ rpmostree_sysroot_upgrader_get_sack (RpmOstreeSysrootUpgrader *self, GError **er
   return self->rpmmd_sack;
 }
 
-#include <iostream>
-#include <fstream>
-#include <rpmostreed-os.cxx>
+// #include <iostream>
+// #include <fstream>
+// #include <rpmostreed-os.cxx>
 
-gboolean
-rpm_ostree_db_diff_ext_container (gchar* manifest_diff, GVariant **total,
-                        GVariant **total_size, GVariant **total_removed,
-                        GVariant **removed_size, GVariant **total_added,
-                        GVariant **added_size, GError **error)
-{
-  char *end_str;
-  char *outer_token = strtok_r(manifest_diff, ",", &end_str);
+// gboolean
+// rpm_ostree_db_diff_ext_container (gchar* manifest_diff, GVariant **total,
+//                         GVariant **total_size, GVariant **total_removed,
+//                         GVariant **removed_size, GVariant **total_added,
+//                         GVariant **added_size, GError **error)
+// {
+//   char *end_str;
+//   char *outer_token = strtok_r(manifest_diff, ",", &end_str);
 
-  while (outer_token != NULL) {
-      char *end_token;
-      char *inner_token = strtok_r(outer_token, ":", &end_token);
+//   while (outer_token != NULL) {
+//       char *end_token;
+//       char *inner_token = strtok_r(outer_token, ":", &end_token);
 
-      while (inner_token != NULL) {
+//       while (inner_token != NULL) {
 
-        if (!strcmp(inner_token, "total")) {
-          inner_token = strtok_r(NULL, ":", &end_token);
-          *total = g_variant_new("s", inner_token);
-        }
-        else if (!strcmp(inner_token, "total_size")) {
-          inner_token = strtok_r(NULL, ":", &end_token);
-          *total_size = g_variant_new("s", inner_token);
-        }
-        else if (!strcmp(inner_token, "total_removed")) {
-          inner_token = strtok_r(NULL, ":", &end_token);
-          *total_removed = g_variant_new("s", inner_token);
-        }
-        else if (!strcmp(inner_token, "removed_size")) {
-          inner_token = strtok_r(NULL, ":", &end_token);
-          *removed_size = g_variant_new("s", inner_token);
-        }
-        else if (!strcmp(inner_token, "total_added")) {
-          inner_token = strtok_r(NULL, ":", &end_token);
-          *total_added = g_variant_new("s", inner_token);
-        }
-        else if (!strcmp(inner_token, "added_size")) {
-          inner_token = strtok_r(NULL, ":", &end_token);
-          *added_size = g_variant_new("s", inner_token);
-        }
-        inner_token = strtok_r(NULL, ":", &end_token);
-      }
-      outer_token = strtok_r(NULL, ",", &end_str);
-  }
+//         if (!strcmp(inner_token, "total")) {
+//           inner_token = strtok_r(NULL, ":", &end_token);
+//           *total = g_variant_new("s", inner_token);
+//         }
+//         else if (!strcmp(inner_token, "total_size")) {
+//           inner_token = strtok_r(NULL, ":", &end_token);
+//           *total_size = g_variant_new("s", inner_token);
+//         }
+//         else if (!strcmp(inner_token, "total_removed")) {
+//           inner_token = strtok_r(NULL, ":", &end_token);
+//           *total_removed = g_variant_new("s", inner_token);
+//         }
+//         else if (!strcmp(inner_token, "removed_size")) {
+//           inner_token = strtok_r(NULL, ":", &end_token);
+//           *removed_size = g_variant_new("s", inner_token);
+//         }
+//         else if (!strcmp(inner_token, "total_added")) {
+//           inner_token = strtok_r(NULL, ":", &end_token);
+//           *total_added = g_variant_new("s", inner_token);
+//         }
+//         else if (!strcmp(inner_token, "added_size")) {
+//           inner_token = strtok_r(NULL, ":", &end_token);
+//           *added_size = g_variant_new("s", inner_token);
+//         }
+//         inner_token = strtok_r(NULL, ":", &end_token);
+//       }
+//       outer_token = strtok_r(NULL, ",", &end_str);
+//   }
 
-  if (*total == NULL || *total_size == NULL || *total_removed == NULL || *removed_size == NULL || *total_added == NULL || *added_size == NULL) {
-    return FALSE;
-  }
-  return TRUE;
-}
+//   if (*total == NULL || *total_size == NULL || *total_removed == NULL || *removed_size == NULL || *total_added == NULL || *added_size == NULL) {
+//     return FALSE;
+//   }
+//   return TRUE;
+// }
 
-static gboolean
-manifest_diff_add_db_diff (std::string manifest_diff, GCancellable *cancellable, GError **error)
-{
+// static gboolean
+// manifest_diff_add_db_diff (std::string manifest_diff, GCancellable *cancellable, GError **error)
+// {
 
-  g_autoptr (GVariant) total = NULL;
-  g_autoptr (GVariant) total_size = NULL;
-  g_autoptr (GVariant) total_removed = NULL;
-  g_autoptr (GVariant) removed_size = NULL;
-  g_autoptr (GVariant) total_added = NULL;
-  g_autoptr (GVariant) added_size = NULL;
+//   g_autoptr (GVariant) total = NULL;
+//   g_autoptr (GVariant) total_size = NULL;
+//   g_autoptr (GVariant) total_removed = NULL;
+//   g_autoptr (GVariant) removed_size = NULL;
+//   g_autoptr (GVariant) total_added = NULL;
+//   g_autoptr (GVariant) added_size = NULL;
   
-  rpmostree_output_message ("Before copy");
-  gchar *converted_manifest_diff = strcpy(new char[manifest_diff.length() + 1], manifest_diff.c_str());
-  // manifest_diff = "total:51,total_size:714.8 MB,total_removed:0,removed_size:0 bytes,total_added:0,added_size:0 bytes";
-  rpmostree_output_message ("Before pop");
-  if (!rpm_ostree_db_diff_ext_container (converted_manifest_diff, &total, &total_size,
-                              &total_removed, &removed_size, &total_added, &added_size, error))
-    return FALSE;
+//   rpmostree_output_message ("Before copy");
+//   gchar *converted_manifest_diff = strcpy(new char[manifest_diff.length() + 1], manifest_diff.c_str());
+//   // manifest_diff = "total:51,total_size:714.8 MB,total_removed:0,removed_size:0 bytes,total_added:0,added_size:0 bytes";
+//   rpmostree_output_message ("Before pop");
+//   if (!rpm_ostree_db_diff_ext_container (converted_manifest_diff, &total, &total_size,
+//                               &total_removed, &removed_size, &total_added, &added_size, error))
+//     return FALSE;
   
-  rpmostree_output_message ("After pop");
+//   rpmostree_output_message ("After pop");
 
-  const gchar *tmp1;
-  const gchar *tmp2;
-  const gchar *tmp3;
-  const gchar *tmp4;
-  const gchar *tmp5;
-  const gchar *tmp6;
-
-
-  g_variant_get (total, "s", &tmp1);
-  rpmostree_output_message ("%s", tmp1);
-  g_variant_get (total_size, "s", &tmp2);
-  rpmostree_output_message ("%s", tmp2);
-  g_variant_get (total_removed, "s", &tmp3);
-  rpmostree_output_message ("%s", tmp3);
-  g_variant_get (removed_size, "s", &tmp4);
-  rpmostree_output_message ("%s", tmp4);
-  g_variant_get (total_added, "s", &tmp5);
-  rpmostree_output_message ("%s", tmp5);
-  g_variant_get (added_size, "s", &tmp6);
-  rpmostree_output_message ("%s", tmp6);
-
-  rpmostree_output_message ("Before dict pop");
-  g_auto (GVariantDict) manifest_dict;
-  g_variant_dict_init (&manifest_dict, NULL);
-  g_variant_dict_insert (&manifest_dict, "total", "s", tmp1);
-  g_variant_dict_insert (&manifest_dict, "total_size", "s", tmp2);
-  g_variant_dict_insert (&manifest_dict, "total_removed", "s", tmp3);
-  g_variant_dict_insert (&manifest_dict, "removed_size", "s", tmp4);
-  g_variant_dict_insert (&manifest_dict, "total_added", "s", tmp5);
-  g_variant_dict_insert (&manifest_dict, "added_size", "s", tmp6);
-
-  rpmostree_output_message ("After dict pop");
+//   const gchar *tmp1;
+//   const gchar *tmp2;
+//   const gchar *tmp3;
+//   const gchar *tmp4;
+//   const gchar *tmp5;
+//   const gchar *tmp6;
 
 
-  // rpmostree_output_message ("Empty dict initialized");
-  // g_auto (GVariantBuilder) manifest_diff_dict;
-  // g_variant_builder_init (&manifest_diff_dict, G_VARIANT_TYPE ("{sv}"));
+//   g_variant_get (total, "s", &tmp1);
+//   rpmostree_output_message ("%s", tmp1);
+//   g_variant_get (total_size, "s", &tmp2);
+//   rpmostree_output_message ("%s", tmp2);
+//   g_variant_get (total_removed, "s", &tmp3);
+//   rpmostree_output_message ("%s", tmp3);
+//   g_variant_get (removed_size, "s", &tmp4);
+//   rpmostree_output_message ("%s", tmp4);
+//   g_variant_get (total_added, "s", &tmp5);
+//   rpmostree_output_message ("%s", tmp5);
+//   g_variant_get (added_size, "s", &tmp6);
+//   rpmostree_output_message ("%s", tmp6);
 
-  // g_variant_builder_add (&manifest_diff_dict, "{sv}", "total", total);
-  // rpmostree_output_message ("Add total to builder");
-  // g_variant_builder_add (&manifest_diff_dict, "{sv}", "total_size", total_size);
-  // rpmostree_output_message ("Add total_size to builder");
-  // g_variant_builder_add (&manifest_diff_dict, "{sv}", "total_removed", total_removed);
-  // rpmostree_output_message ("Add total_removed to builder");
-  // g_variant_builder_add (&manifest_diff_dict, "{sv}", "removed_size", removed_size);
-  // rpmostree_output_message ("Add removed_size to builder");
-  // g_variant_builder_add (&manifest_diff_dict, "{sv}", "total_added", total_added);
-  // rpmostree_output_message ("Add total_added to builder");
-  // g_variant_builder_add (&manifest_diff_dict, "{sv}", "added_size", added_size);
-  // rpmostree_output_message ("Add added_size to builder");
-  // rpmostree_output_message ("Dict created");
-  // g_variant_builder_unref(manifest_diff_dict);
+//   rpmostree_output_message ("Before dict pop");
+//   g_auto (GVariantDict) manifest_dict;
+//   g_variant_dict_init (&manifest_dict, NULL);
+//   g_variant_dict_insert (&manifest_dict, "total", "s", tmp1);
+//   g_variant_dict_insert (&manifest_dict, "total_size", "s", tmp2);
+//   g_variant_dict_insert (&manifest_dict, "total_removed", "s", tmp3);
+//   g_variant_dict_insert (&manifest_dict, "removed_size", "s", tmp4);
+//   g_variant_dict_insert (&manifest_dict, "total_added", "s", tmp5);
+//   g_variant_dict_insert (&manifest_dict, "added_size", "s", tmp6);
 
-  g_auto (GVariantDict) dict;
-  g_variant_dict_init (&dict, NULL);
-  g_variant_dict_insert (&dict, "manifest-diff", "@a{sv}", g_variant_dict_end (&manifest_dict));
+//   rpmostree_output_message ("After dict pop");
 
-  g_autoptr (GVariant) update = NULL;
-  update = g_variant_ref_sink (g_variant_dict_end (&dict));
 
-  if (update != NULL)
-    {
-      rpmostree_output_message ("Update not NULL");
-      if (!glnx_file_replace_contents_at (AT_FDCWD, RPMOSTREE_AUTOUPDATES_CACHE_FILE,
-                                          static_cast<const guint8 *> (g_variant_get_data (update)),
-                                          g_variant_get_size (update),
-                                          static_cast<GLnxFileReplaceFlags> (0), cancellable,
-                                          error))
-        return FALSE;
-    }
+//   // rpmostree_output_message ("Empty dict initialized");
+//   // g_auto (GVariantBuilder) manifest_diff_dict;
+//   // g_variant_builder_init (&manifest_diff_dict, G_VARIANT_TYPE ("{sv}"));
 
-  rpmostree_output_message ("before file check");
-  std::ifstream infile("/var/cache/rpm-ostree/cached-update.gv");
-  rpmostree_output_message ("%d", infile.good());
-  // rpmoZ
-  // g_variant_builder_unref(manifest_diff_dict);
+//   // g_variant_builder_add (&manifest_diff_dict, "{sv}", "total", total);
+//   // rpmostree_output_message ("Add total to builder");
+//   // g_variant_builder_add (&manifest_diff_dict, "{sv}", "total_size", total_size);
+//   // rpmostree_output_message ("Add total_size to builder");
+//   // g_variant_builder_add (&manifest_diff_dict, "{sv}", "total_removed", total_removed);
+//   // rpmostree_output_message ("Add total_removed to builder");
+//   // g_variant_builder_add (&manifest_diff_dict, "{sv}", "removed_size", removed_size);
+//   // rpmostree_output_message ("Add removed_size to builder");
+//   // g_variant_builder_add (&manifest_diff_dict, "{sv}", "total_added", total_added);
+//   // rpmostree_output_message ("Add total_added to builder");
+//   // g_variant_builder_add (&manifest_diff_dict, "{sv}", "added_size", added_size);
+//   // rpmostree_output_message ("Add added_size to builder");
+//   // rpmostree_output_message ("Dict created");
+//   // g_variant_builder_unref(manifest_diff_dict);
+
+//   g_auto (GVariantDict) dict;
+//   g_variant_dict_init (&dict, NULL);
+//   g_variant_dict_insert (&dict, "manifest-diff", "@a{sv}", g_variant_dict_end (&manifest_dict));
+
+//   g_autoptr (GVariant) update = NULL;
+//   update = g_variant_ref_sink (g_variant_dict_end (&dict));
+
+//   if (update != NULL)
+//     {
+//       rpmostree_output_message ("Update not NULL");
+//       if (!glnx_file_replace_contents_at (AT_FDCWD, RPMOSTREE_AUTOUPDATES_CACHE_FILE,
+//                                           static_cast<const guint8 *> (g_variant_get_data (update)),
+//                                           g_variant_get_size (update),
+//                                           static_cast<GLnxFileReplaceFlags> (0), cancellable,
+//                                           error))
+//         return FALSE;
+//     }
+
+//   rpmostree_output_message ("before file check");
+//   std::ifstream infile("/var/cache/rpm-ostree/cached-update.gv");
+//   rpmostree_output_message ("%d", infile.good());
+//   // rpmoZ
+//   // g_variant_builder_unref(manifest_diff_dict);
         
-  rpmostree_output_message ("Cache file updated");
-  // diff->total = total;
-  // diff->total_size = total_size;
-  // diff->total_removed = total_removed;
-  // diff->removed_size = removed_size;
-  // diff->total_added = total_added;
-  // diff->added_size = added_size;
-  return TRUE;
-}
+//   rpmostree_output_message ("Cache file updated");
+//   // diff->total = total;
+//   // diff->total_size = total_size;
+//   // diff->total_removed = total_removed;
+//   // diff->removed_size = removed_size;
+//   // diff->total_added = total_added;
+//   // diff->added_size = added_size;
+//   return TRUE;
+// }
 
 
 
@@ -600,6 +600,10 @@ rpmostree_sysroot_upgrader_pull_base (RpmOstreeSysrootUpgrader *self, const char
 
         if (check)
           {
+            // the use of this function might just be a red hearing, because it might have only
+            // been introduced to output the error message. Potential next step, just update
+            // all the cached update (existing and with the new manifest-diff) and the `check`
+            // part will just be on the builtin-upgrade side
             g_autofree char *origin_remote = NULL;
             g_autofree char *origin_ref = NULL;
             if (!ostree_parse_refspec (r.refspec.c_str (), &origin_remote, &origin_ref, error))
@@ -612,9 +616,10 @@ rpmostree_sysroot_upgrader_pull_base (RpmOstreeSysrootUpgrader *self, const char
                 error);
 
             rpmostree_output_message ("%s", res.c_str ());
-            manifest_diff_add_db_diff (res.c_str (), cancellable, error);
+            // manifest_diff_add_db_diff (res.c_str (), cancellable, error);
 
-            rpmostree_output_message ("%s", self->osname);
+            // rpmostree_output_message ("%s", self->osname);
+
             // auto obj = (RpmostreedOS *)g_object_new (RPMOSTREED_TYPE_OS, "name", self->osname, NULL);
             // g_autoptr (GError) local_error = NULL;
             // if (!refresh_cached_update (obj, &local_error))

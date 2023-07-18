@@ -52,4 +52,9 @@ _RPMOSTREE_EXTERN gboolean rpm_ostree_db_diff_ext (
     OstreeRepo *repo, const char *orig_ref, const char *new_ref, RpmOstreeDbDiffExtFlags flags,
     GPtrArray **out_removed, GPtrArray **out_added, GPtrArray **out_modified_old,
     GPtrArray **out_modified_new, GCancellable *cancellable, GError **error);
+
+_RPMOSTREE_EXTERN gboolean rpm_ostree_db_diff_ext_container (gchar* manifest_diff, GVariant **total,
+                        GVariant **total_size, GVariant **total_removed,
+                        GVariant **removed_size, GVariant **total_added,
+                        GVariant **added_size, GError **error);
 G_END_DECLS

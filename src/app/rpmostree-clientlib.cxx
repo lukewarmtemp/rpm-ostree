@@ -1243,6 +1243,77 @@ rpmostree_print_diff_advisories (GVariant *rpm_diff, GVariant *advisories, gbool
   return TRUE;
 }
 
+/* print "manifest-diff" */
+gboolean
+rpmostree_print_manifest_diff (GVariant *manifest_diff, guint maxkeylen, GError **error)
+{
+  const gchar *total_str;
+  const gchar *total_size_str;
+  const gchar *total_removed_str;
+  const gchar *removed_size_str;
+  const gchar *total_added_str;
+  const gchar *added_size_str;
+
+  g_auto (GVariantDict) manifest_diff_dict;
+  g_variant_dict_init (&manifest_diff_dict, manifest_diff);
+
+  g_autoptr (GVariant) total
+      = g_variant_dict_lookup_value (&manifest_diff_dict, "total", G_VARIANT_TYPE ("s"));
+  if (!total)
+    return FALSE;
+
+  g_variant_get (total, "s", &total_str);
+  printf ("  %*s%s %s", maxkeylen, "Total layers", strlen ("Total layers") ? ":" : " ", total_str);
+  printf("\n");
+
+  g_autoptr (GVariant) total_size
+      = g_variant_dict_lookup_value (&manifest_diff_dict, "total_size", G_VARIANT_TYPE ("s"));
+  if (!total_size)
+    return FALSE;
+
+  g_variant_get (total_size, "s", &total_size_str);
+  printf ("  %*s%s %s", maxkeylen, "Size", strlen ("Size") ? ":" : " ", total_size_str);
+  printf("\n");
+
+  g_autoptr (GVariant) total_removed
+      = g_variant_dict_lookup_value (&manifest_diff_dict, "total_removed", G_VARIANT_TYPE ("s"));
+  if (!total_removed)
+    return FALSE;
+
+  g_variant_get (total_removed, "s", &total_removed_str);
+  printf (" %*s%s %s", maxkeylen, "Removed layers", strlen ("Removed layers") ? ":" : " ", total_removed_str);
+  printf("\n");
+
+   g_autoptr (GVariant) removed_size
+      = g_variant_dict_lookup_value (&manifest_diff_dict, "removed_size", G_VARIANT_TYPE ("s"));
+  if (!removed_size)
+    return FALSE;
+
+  g_variant_get (removed_size, "s", &removed_size_str);
+  printf ("  %*s%s %s", maxkeylen, "Size", strlen ("Size") ? ":" : " ", removed_size_str);
+  printf("\n");
+
+   g_autoptr (GVariant) total_added
+      = g_variant_dict_lookup_value (&manifest_diff_dict, "total_added", G_VARIANT_TYPE ("s"));
+  if (!total_added)
+    return FALSE;
+
+  g_variant_get (total_added, "s", &total_added_str);
+  printf ("  %*s%s %s", maxkeylen, "Added layers", strlen ("Added layers") ? ":" : " ", total_added_str);
+  printf("\n");
+
+   g_autoptr (GVariant) added_size
+      = g_variant_dict_lookup_value (&manifest_diff_dict, "added_size", G_VARIANT_TYPE ("s"));
+  if (!added_size)
+    return FALSE;
+
+  g_variant_get (added_size, "s", &added_size_str);
+  printf ("  %*s%s %s", maxkeylen, "Size", strlen ("Size") ? ":" : " ", added_size_str);
+  printf("\n");
+
+  return TRUE;
+}
+
 /* this is used by both `status` and `upgrade --check/--preview` */
 gboolean
 rpmostree_print_cached_update (GVariant *cached_update, gboolean verbose,
@@ -1285,6 +1356,9 @@ rpmostree_print_cached_update (GVariant *cached_update, gboolean verbose,
   g_autoptr (GVariant) rpm_diff
       = g_variant_dict_lookup_value (&dict, "rpm-diff", G_VARIANT_TYPE ("a{sv}"));
 
+  g_autoptr (GVariant) manifest_diff
+      = g_variant_dict_lookup_value (&dict, "manifest-diff", G_VARIANT_TYPE ("a{sv}"));
+
   g_autoptr (GVariant) advisories
       = g_variant_dict_lookup_value (&dict, "advisories", G_VARIANT_TYPE ("a(suuasa{sv})"));
 
@@ -1306,127 +1380,13 @@ rpmostree_print_cached_update (GVariant *cached_update, gboolean verbose,
   if (!rpmostree_print_diff_advisories (rpm_diff, advisories, verbose, verbose_advisories,
                                         max_key_len, error))
     return FALSE;
-
-  return TRUE;
-}
-
-gboolean
-rpmostree_print_cached_update_container (GVariant *cached_update, gboolean verbose,
-                               gboolean verbose_advisories, GCancellable *cancellable,
-                               GError **error)
-{
-  GLNX_AUTO_PREFIX_ERROR ("Retrieving cached update", error);
-  g_print("Enter Print Func\n");
-
-  g_auto (GVariantDict) dict;
-  g_variant_dict_init (&dict, cached_update);
-  if (cached_update == NULL)
-    g_print("Failure\n");
-  g_print("Not failure\n");
-
-  /* let's just extract 📤 all the info ahead of time */
-
-  // const char *total;
-  // if (!g_variant_dict_lookup (&dict, "total", "&s", &total))
-  //   return glnx_throw (error, "Missing \"total\" key");
-
-  if (!g_variant_dict_lookup_value (&dict, "manifest-diff", G_VARIANT_TYPE ("a{sv}")))
-    return glnx_throw (error, "Missing \"manifest-diff\" key");
   
-  g_autoptr (GVariant) mainfest_diff
-      = g_variant_dict_lookup_value (&dict, "manifest-diff", G_VARIANT_TYPE ("a{sv}"));
-
-  g_auto (GVariantDict) manifest_diff_dict;
-  g_variant_dict_init (&manifest_diff_dict, mainfest_diff);
-
-  g_autoptr (GVariant) total
-      = g_variant_dict_lookup_value (&manifest_diff_dict, "total", G_VARIANT_TYPE ("s"));
-  if (!total)
+  if (!rpmostree_print_manifest_diff (manifest_diff, max_key_len, error))
     return FALSE;
 
-  const gchar *tmp1;
-  g_variant_get (total, "s", &tmp1);
-  g_print("%s\n", tmp1);
-
-  // g_auto (GVariantDict) dict;
-  // g_variant_dict_init (&dict, cached_update);
-
-  // /* let's just extract 📤 all the info ahead of time */
-
-  // g_autoptr (GVariant) manifest_diff
-  //     = g_variant_dict_lookup_value (&dict, "manifest-diff", G_VARIANT_TYPE ("a{sv}"));
-
-  // g_autoptr (GVariantIter) iter1 = NULL;
-  // g_variant_get (manifest_diff, "a{sv}", &iter1);
-
-  // if (!manifest_diff)
-  //   g_print("WE Failed");
-
-  // const gchar *key;
-  // const gchar *value;
-  // while (g_variant_iter_loop (iter1, "{sv}", &key, &value))
-  //   {
-  //     g_print("%s", key);
-    // }
-
-  // g_auto (GVariantDict) rpm_diff_dict;
-  // g_variant_dict_init (&rpm_diff_dict, rpm_diff);
-
-  // g_autoptr (GVariant) total
-  //     = g_variant_dict_lookup_value (manifest_diff, "total", G_VARIANT_TYPE ("s"));
-  // if (!total) {
-  //   g_print("WE Failed");
-  //   return FALSE;
-  // }
-
-  // g_autoptr (GVariant) total_size = _rpmostree_vardict_lookup_value_required (
-  //     &rpm_diff_dict, "total_size", RPMOSTREE_DIFF_MODIFIED_GVARIANT_FORMAT, error);
-  // if (!total_size)
-  //   return FALSE;
-
-  // g_autoptr (GVariant) total_removed = _rpmostree_vardict_lookup_value_required (
-  //     &rpm_diff_dict, "total_removed", RPMOSTREE_DIFF_MODIFIED_GVARIANT_FORMAT, error);
-  // if (!total_removed)
-  //   return FALSE;
-
-  // g_autoptr (GVariant) removed_size = _rpmostree_vardict_lookup_value_required (
-  //     &rpm_diff_dict, "removed_size", RPMOSTREE_DIFF_MODIFIED_GVARIANT_FORMAT, error);
-  // if (!removed_size)
-  //   return FALSE;
-
-  // g_autoptr (GVariant) total_added = _rpmostree_vardict_lookup_value_required (
-  //     &rpm_diff_dict, "total_added", RPMOSTREE_DIFF_MODIFIED_GVARIANT_FORMAT, error);
-  // if (!total_added)
-  //   return FALSE;
-
-  // g_autoptr (GVariant) added_size = _rpmostree_vardict_lookup_value_required (
-  //     &rpm_diff_dict, "added_size", RPMOSTREE_DIFF_MODIFIED_GVARIANT_FORMAT, error);
-  // if (!added_size)
-  //   return FALSE;
-
-  // const gchar *tmp1;
-  // const gchar *tmp2;
-  // const gchar *tmp3;
-  // const gchar *tmp4;
-  // const gchar *tmp5;
-  // const gchar *tmp6;
-
-  // g_variant_get (total, "s", &tmp1);
-  // g_variant_get (total_size, "s", &tmp2);
-  // g_variant_get (total_removed, "s", &tmp3);
-  // g_variant_get (removed_size, "s", &tmp4);
-  // g_variant_get (total_added, "s", &tmp5);
-  // g_variant_get (added_size, "s", &tmp6);
-
-  // g_print("%s", tmp1);
-  // g_print("%s", tmp2);
-  // g_print("%s", tmp3);
-  // g_print("%s", tmp4);
-  // g_print("%s", tmp5);
-  // g_print("%s", tmp6);
-
   return TRUE;
 }
+
 
 /* Query systemd for systemd unit's object path using method_name provided with
  * parameters. The reply_type of method_name must be G_VARIANT_TYPE_TUPLE. */

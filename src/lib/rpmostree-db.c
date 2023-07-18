@@ -155,3 +155,53 @@ rpm_ostree_db_diff_ext (OstreeRepo *repo, const char *orig_ref, const char *new_
   return _rpm_ostree_diff_package_lists (orig_pkglist, new_pkglist, out_removed, out_added,
                                          out_modified_old, out_modified_new, NULL);
 }
+
+gboolean
+rpm_ostree_db_diff_ext_container (gchar* manifest_diff, GVariant **total,
+                        GVariant **total_size, GVariant **total_removed,
+                        GVariant **removed_size, GVariant **total_added,
+                        GVariant **added_size, GError **error)
+{
+  char *end_str;
+  char *outer_token = strtok_r(manifest_diff, ",", &end_str);
+
+  while (outer_token != NULL) {
+      char *end_token;
+      char *inner_token = strtok_r(outer_token, ":", &end_token);
+
+      while (inner_token != NULL) {
+
+        if (!strcmp(inner_token, "total")) {
+          inner_token = strtok_r(NULL, ":", &end_token);
+          *total = g_variant_new("s", inner_token);
+        }
+        else if (!strcmp(inner_token, "total_size")) {
+          inner_token = strtok_r(NULL, ":", &end_token);
+          *total_size = g_variant_new("s", inner_token);
+        }
+        else if (!strcmp(inner_token, "total_removed")) {
+          inner_token = strtok_r(NULL, ":", &end_token);
+          *total_removed = g_variant_new("s", inner_token);
+        }
+        else if (!strcmp(inner_token, "removed_size")) {
+          inner_token = strtok_r(NULL, ":", &end_token);
+          *removed_size = g_variant_new("s", inner_token);
+        }
+        else if (!strcmp(inner_token, "total_added")) {
+          inner_token = strtok_r(NULL, ":", &end_token);
+          *total_added = g_variant_new("s", inner_token);
+        }
+        else if (!strcmp(inner_token, "added_size")) {
+          inner_token = strtok_r(NULL, ":", &end_token);
+          *added_size = g_variant_new("s", inner_token);
+        }
+        inner_token = strtok_r(NULL, ":", &end_token);
+      }
+      outer_token = strtok_r(NULL, ",", &end_str);
+  }
+
+  if (*total == NULL || *total_size == NULL || *total_removed == NULL || *removed_size == NULL || *total_added == NULL || *added_size == NULL) {
+    return FALSE;
+  }
+  return TRUE;
+}
