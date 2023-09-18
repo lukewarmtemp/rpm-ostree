@@ -35,10 +35,13 @@ image_pull=ostree-unverified-image:$image
 tmp_imagedir=/var/tmp/fcos-tmp
 arch=$(arch)
 
+# check if the system is already booted from a container image
+rpm-ostree status | tee out.txt
+is_native_container=`assert_file_has_content_literal out.txt 'Digest: sha256:'`
+
 case "${AUTOPKGTEST_REBOOT_MARK:-}" in
   "")
     # Take the existing ostree commit, and export it to a container image, then rebase to it.
-
     checksum=$(rpm-ostree status --json | jq -r '.deployments[0].checksum')
     v0=$(rpm-ostree status --json | jq -r '.deployments[0].version')
     rm ${image_dir} -rf
@@ -46,24 +49,29 @@ case "${AUTOPKGTEST_REBOOT_MARK:-}" in
     # Since we're switching OS update stream, turn off zincati
     systemctl mask --now zincati
 
-    ostree container encapsulate --repo=/ostree/repo ${checksum} "${image}"
-    # This one keeps --experimental, but we also test without it below
-    rpm-ostree rebase --experimental "$image_pull" | tee out.txt
-    assert_file_has_content out.txt 'Importing.*'"$image_pull"
-    rpmostree_assert_status ".deployments[0][\"container-image-reference\"] == \"ostree-unverified-image:$image\""
-    # Verify we use the merge commit now
-    rpmostree_assert_status ".deployments[0][\"checksum\"] != \"${checksum}\""
-    echo "ok rebase to container image reference"
+    if !is_native_container ; then
+      ostree container encapsulate --repo=/ostree/repo ${checksum} "${image}"
+      # This one keeps --experimental, but we also test without it below
+      rpm-ostree rebase --experimental "$image_pull" | tee out.txt
+      assert_file_has_content out.txt 'Importing.*'"$image_pull"
+      rpmostree_assert_status ".deployments[0][\"container-image-reference\"] == \"ostree-unverified-image:$image\""
+      # # Verify we use the merge commit now
+      rpmostree_assert_status ".deployments[0][\"checksum\"] != \"${checksum}\""
+      echo "ok rebase to container image reference"
 
-    rpm-ostree status | tee out.txt
-    assert_file_has_content_literal out.txt 'Digest: sha256:'
-    ostree container image list --repo=/ostree/repo | tee imglist.txt
-    assert_streq "$(wc -l < imglist.txt)" 1
+      rpm-ostree status | tee out.txt
+      assert_file_has_content_literal out.txt 'Digest: sha256:'
+      ostree container image list --repo=/ostree/repo | tee imglist.txt
+      assert_streq "$(wc -l < imglist.txt)" 1
 
-    v1=$(rpm-ostree status --json | jq -r '.deployments[0].version')
-    assert_streq "${v0}" "${v1}"
-
-    # Test rebasing back to ostree https://github.com/coreos/rpm-ostree/issues/3677
+      v1=$(rpm-ostree status --json | jq -r '.deployments[0].version')
+      assert_streq "${v0}" "${v1}"
+    else 
+      # add bootable label
+      ostree container encapsulate --repo=/ostree/repo ${checksum} "${image}" --label=ostree.bootable=1
+    fi
+    
+    # # Test rebasing back to ostree https://github.com/coreos/rpm-ostree/issues/3677
     rpm-ostree rebase "$checksum"
     rpm-ostree rebase "$image_pull"
 
@@ -164,7 +172,13 @@ EOF
     fi
     rpm-ostree rebase ostree-unverified-image:containers-storage:localhost/fcos-derived
     ostree container image list --repo=/ostree/repo | tee imglist.txt
-    assert_streq "$(wc -l < imglist.txt)" 1
+
+    # there will be two images, the booted base image and the encapsulated one
+    if !$is_native_container ; then
+      assert_streq "$(wc -l < imglist.txt)" 1
+    else
+      assert_streq "$(wc -l < imglist.txt)" 2
+    fi
     rm $image_dir -rf
     /tmp/autopkgtest-reboot 3
     ;;
