@@ -45,7 +45,8 @@ case "${AUTOPKGTEST_REBOOT_MARK:-}" in
     # Since we're switching OS update stream, turn off zincati
     systemctl mask --now zincati
 
-    # check if the system is already booted from a container image
+    # Check if the system is already booted from a container image.
+    # If we are, just rebase the the local encapulsated image
     rpm-ostree status | tee out.txt
     if [ $(grep -c 'Digest: sha256:' out.txt) -eq 0 ]; then
       ostree container encapsulate --repo=/ostree/repo ${checksum} "${image}"
@@ -76,7 +77,10 @@ case "${AUTOPKGTEST_REBOOT_MARK:-}" in
     /tmp/autopkgtest-reboot 1
     ;;
   1)
-    # Verify we're still booted from the container image
+    # Verify we originally booted from the container image by checking the number
+    # of images in the repo. There should only be the encapsulated image if we
+    # booted from an ostree commit. There will be two images, the original booted
+    # image and the ecapsulated image if wee started from a container image.
     ostree container image list --repo=/ostree/repo | tee imglist.txt
     if [ "$(wc -l < imglist.txt)" == 2 ]; then
       is_native_container="true"
@@ -178,7 +182,7 @@ EOF
     rpm-ostree rebase ostree-unverified-image:containers-storage:localhost/fcos-derived
     ostree container image list --repo=/ostree/repo | tee imglist.txt
 
-    # different number of images depending on whether we're in a native container
+    # check if the the of container images is still the same as before
     if [ "$is_native_container" == "true" ]; then
       assert_streq "$(wc -l < imglist.txt)" 2;
     else
