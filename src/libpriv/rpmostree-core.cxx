@@ -1782,7 +1782,7 @@ rpmostree_context_prepare (RpmOstreeContext *self, GCancellable *cancellable, GE
                                               | DNF_CONTEXT_SETUP_SACK_FLAG_SKIP_FILELISTS);
 
       /* check if filelist optimization is disabled */
-      if (rpmostreed_get_filelists (rpmostreed_daemon_get ()))
+      if (true)
         {
           flags = (DnfContextSetupSackFlags)(DNF_CONTEXT_SETUP_SACK_FLAG_LOAD_UPDATEINFO);
         }
