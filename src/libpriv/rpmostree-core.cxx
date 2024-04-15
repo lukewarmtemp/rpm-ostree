@@ -1782,12 +1782,25 @@ rpmostree_context_prepare (RpmOstreeContext *self, GCancellable *cancellable, GE
                                               | DNF_CONTEXT_SETUP_SACK_FLAG_SKIP_FILELISTS);
 
       /* check if filelist optimization is disabled */
-      if (rpmostreed_get_filelists (rpmostreed_daemon_get ()))
+      auto test = g_getenv ("DOWNLOAD_FILELISTS");
+      sd_journal_print (LOG_WARNING, "DOWNLOAD_FILELISTS: %s", test);
+
+      extern char **environ;
+      
+      for (char **env = environ; *env != 0; env++)
+      {
+        char *thisEnv = *env;
+        sd_journal_print (LOG_WARNING, "%s", thisEnv);   
+      }
+
+      if ( g_getenv ("DOWNLOAD_FILELISTS") )
         {
+          sd_journal_print (LOG_WARNING, "YES!");
           flags = (DnfContextSetupSackFlags)(DNF_CONTEXT_SETUP_SACK_FLAG_LOAD_UPDATEINFO);
         }
       else
         {
+          sd_journal_print (LOG_WARNING, "NO!");
           auto pkg = "";
           for (auto &pkg_str : packages)
             {

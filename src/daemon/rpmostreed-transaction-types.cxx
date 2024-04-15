@@ -2286,8 +2286,7 @@ refresh_md_transaction_execute (RpmostreedTransaction *transaction, GCancellable
 
   /* update filelists if filelists were previously downloaded or filelist optimization is disabled
    */
-  if (rpmostree_context_get_filelists_exist (ctx)
-      || rpmostreed_get_filelists (rpmostreed_daemon_get ()))
+  if (rpmostree_context_get_filelists_exist (ctx) || g_getenv ("DOWNLOAD_FILELISTS"))
     {
       flags = (DnfContextSetupSackFlags)(DNF_CONTEXT_SETUP_SACK_FLAG_SKIP_RPMDB);
     }
