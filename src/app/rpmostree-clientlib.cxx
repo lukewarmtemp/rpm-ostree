@@ -770,7 +770,7 @@ rpmostree_print_gpg_info (GVariant *signatures, gboolean verbose, guint max_key_
     {
       /* +2 for initial leading spaces */
       const guint gpgpad = max_key_len + 2 + strlen (": ");
-      char gpgspaces[gpgpad + 1];
+      char *gpgspaces = new char[gpgpad + 1];
       memset (gpgspaces, ' ', gpgpad);
       gpgspaces[gpgpad] = '\0';
 
